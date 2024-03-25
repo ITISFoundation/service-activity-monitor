@@ -41,5 +41,6 @@ echo "Installation complete."
 
 # Cleanup
 rm /tmp/release.zip
+rm -rf /tmp/release
 
 echo "Done!"
