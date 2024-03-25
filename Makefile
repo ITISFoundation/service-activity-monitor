@@ -37,6 +37,14 @@ tests-dev:	## run tests in development mode
 tests-ci:	## run testds in the CI
 	.venv/bin/pytest -vvv --color=yes --cov-report term --cov=activity_monitor tests 
 
+
+.PHONY: release
+release:	## triggers the CI to create a new release from the tag, usage: `make release tag=TAG`
+	@echo "Releasing: '${tag}'"
+	git tag "${tag}"
+	git push
+	git push --tags
+
 .PHONY: help
 help: ## this colorful help
 	@echo "Recipes for '$(notdir $(CURDIR))':"
