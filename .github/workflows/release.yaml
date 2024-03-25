@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up Git
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: "3.x"
@@ -23,36 +23,24 @@ jobs:
           pip install requests
 
       - name: Extract Tag Name
-        run: |
-          TAG_NAME=$(echo "refs/tags/v.0.0.6-debug" | sed 's/refs\/tags\///')
-          echo "Tag Name: $TAG_NAME"
-
-      - name: List Repository Contents
-        run: ls -la
+        id: extract_tag
+        run: echo ::set-output name=TAG_NAME::$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
 
       - name: Create Zip Archive
         run: |
+          TAG_NAME=${{ steps.extract_tag.outputs.TAG_NAME }}
           zip -r "release_archive_${TAG_NAME}.zip" src
 
       - name: Create GitHub Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
         with:
+          files: |
+            release_archive_${{ steps.extract_tag.outputs.TAG_NAME }}.zip
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          release_name: Release ${{ steps.extract_tag.outputs.TAG_NAME }}
           draft: false
           prerelease: false
-
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "./release_archive_${TAG_NAME}.zip"
-          asset_name: "release_archive_${TAG_NAME}.zip"
-          asset_content_type: application/zip
