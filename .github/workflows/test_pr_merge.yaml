@@ -1,4 +1,4 @@
-name: Test on Pull Request and Merge to Master
+name: Tests
 
 on:
   pull_request:
