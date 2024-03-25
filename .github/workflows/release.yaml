@@ -29,7 +29,7 @@ jobs:
       - name: Create Zip Archive
         run: |
           TAG_NAME=${{ steps.extract_tag.outputs.TAG_NAME }}
-          zip -r "release_archive_${TAG_NAME}.zip" src
+          zip -j "release_archive_${TAG_NAME}.zip" src/*
 
       - name: Create GitHub Release
         id: create_release
