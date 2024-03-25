@@ -1,0 +1,18 @@
+name: Test on Pull Request and Merge to Master
+
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo content
+        uses: actions/checkout@v2
+      - name: run tests
+        run: ./scripts/ci/run_tests.sh
