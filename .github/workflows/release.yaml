@@ -23,7 +23,9 @@ jobs:
           pip install requests
 
       - name: Create Zip Archive
-        run: zip -r release_archive.zip src
+        run: |
+          TAG_NAME=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
+          zip -r "release_${TAG_NAME}.zip" src
 
       - name: Create GitHub Release
         id: create_release
@@ -44,6 +46,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./release_archive.zip
-          asset_name: release_archive.zip
+          asset_path: "./release_${TAG_NAME}.zip"
+          asset_name: "release_${TAG_NAME}.zip"
           asset_content_type: application/zip
