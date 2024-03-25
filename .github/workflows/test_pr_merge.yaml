@@ -3,10 +3,10 @@ name: Test on Pull Request and Merge to Master
 on:
   pull_request:
     branches:
-      - master
+      - main
   push:
     branches:
-      - master
+      - main
 
 jobs:
   tests:
