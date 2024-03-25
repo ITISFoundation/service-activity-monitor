@@ -41,6 +41,6 @@ jobs:
           files: |
             release_archive_${{ steps.extract_tag.outputs.TAG_NAME }}.zip
           tag_name: ${{ github.ref }}
-          release_name: Release ${{ steps.extract_tag.outputs.TAG_NAME }}
+          name: Release ${{ steps.extract_tag.outputs.TAG_NAME }}
           draft: false
           prerelease: false
