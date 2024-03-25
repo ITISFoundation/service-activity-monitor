@@ -33,6 +33,7 @@ curl -sSL -o /tmp/release.zip "$URL"
 
 echo "Extracting files..."
 unzip -q /tmp/release.zip -d /tmp/release
+mkdir -p /use/local/bin/service-monitor
 mv --force /tmp/release/src /use/local/bin/service-monitor
 
 echo "Installing..."
