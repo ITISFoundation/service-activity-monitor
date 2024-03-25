@@ -22,11 +22,17 @@ jobs:
         run: |
           pip install requests
 
+      - name: Extract Tag Name
+        run: |
+          TAG_NAME="${{ github.ref/refs\/tags\// }}"
+          echo "Tag Name: $TAG_NAME"
+
+      - name: List Repository Contents
+        run: ls -la
+
       - name: Create Zip Archive
         run: |
-          TAG_NAME=$(echo "${{ github.ref }}" | sed 's/refs\/tags\///')
-          echo "detected tag ${TAG_NAME}"
-          zip -r "release_${TAG_NAME}.zip" src
+          zip -r "release_archive_${TAG_NAME}.zip" src
 
       - name: Create GitHub Release
         id: create_release
@@ -47,6 +53,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: "./release_${TAG_NAME}.zip"
-          asset_name: "release_${TAG_NAME}.zip"
+          asset_path: "./release_archive_${TAG_NAME}.zip"
+          asset_name: "release_archive_${TAG_NAME}.zip"
           asset_content_type: application/zip
