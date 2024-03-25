@@ -33,6 +33,7 @@ curl -sSL -o /tmp/release.zip "$URL"
 
 echo "Extracting files..."
 unzip -q /tmp/release.zip -d /tmp/release
+mv /tmp/release/src /use/local/bin/service-monitor
 
 echo "Installing..."
 # Here you can write your installation steps, for now let's just echo the installation is complete
