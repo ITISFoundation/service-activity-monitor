@@ -32,9 +32,8 @@ echo "Downloading release $TAG..."
 curl -sSL -o /tmp/release.zip "$URL"
 
 echo "Extracting files..."
-unzip -q /tmp/release.zip -d /tmp/release
 mkdir -p /usr/local/bin/service-monitor
-mv --force /tmp/release/src /usr/local/bin/service-monitor
+unzip -q /tmp/release.zip -d /usr/local/bin/service-monitor
 
 echo "Installing..."
 # Here you can write your installation steps, for now let's just echo the installation is complete
@@ -42,6 +41,5 @@ echo "Installation complete."
 
 # Cleanup
 rm /tmp/release.zip
-rm -rf /tmp/release
 
 echo "Done!"
