@@ -24,7 +24,7 @@ jobs:
 
       - name: Extract Tag Name
         run: |
-          TAG_NAME=$(echo "${{ github.ref }}")
+          TAG_NAME=$(echo "refs/tags/v.0.0.6-debug" | sed 's/refs\/tags\///')
           echo "Tag Name: $TAG_NAME"
 
       - name: List Repository Contents
