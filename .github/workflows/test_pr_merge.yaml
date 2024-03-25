@@ -14,5 +14,7 @@ jobs:
     steps:
       - name: Checkout repo content
         uses: actions/checkout@v2
+      - name: install dependencies
+        run: ./scripts/ci_tests.sh install
       - name: run tests
-        run: ./scripts/ci_run_tests.sh
+        run: ./scripts/ci_tests.sh test
