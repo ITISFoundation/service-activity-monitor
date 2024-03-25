@@ -15,4 +15,4 @@ jobs:
       - name: Checkout repo content
         uses: actions/checkout@v2
       - name: run tests
-        run: ./scripts/ci/run_tests.sh
+        run: ./scripts/ci_run_tests.sh
