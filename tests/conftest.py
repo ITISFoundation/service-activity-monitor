@@ -13,7 +13,7 @@ from tempfile import NamedTemporaryFile
 from tenacity import Retrying
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_fixed
-from typing import Callable, Final, Iterable, TYPE_CHECKING
+from typing import Callable, Iterable, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..docker import activity_monitor
@@ -24,7 +24,7 @@ else:
     import activity_monitor
 
 
-_LOCAL_LISTEN_PORT: Final[int] = 12345
+_LOCAL_LISTEN_PORT: int = 12345
 
 
 class _ListenSocketServer:

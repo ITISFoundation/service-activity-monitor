@@ -1,9 +1,8 @@
 import os
 
-from typing import Final
 import requests
 
-LISTEN_PORT: Final[int] = int(os.environ.get("ACTIVITY_MONITOR_LISTEN_PORT", 19597))
+LISTEN_PORT: int = int(os.environ.get("ACTIVITY_MONITOR_LISTEN_PORT", 19597))
 
 
 def main():

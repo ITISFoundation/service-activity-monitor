@@ -3,7 +3,7 @@ import pytest
 import requests
 import time
 
-from typing import Callable, Final, TYPE_CHECKING
+from typing import Callable, List, Dict, TYPE_CHECKING
 from pytest_mock import MockFixture
 from tenacity import Retrying
 from tenacity.stop import stop_after_delay
@@ -23,8 +23,8 @@ else:
 @pytest.fixture
 def mock__get_sibling_processes(
     mocker: MockFixture,
-) -> Callable[[list[int]], list[psutil.Process]]:
-    def _get_processes(pids: list[int]) -> list[psutil.Process]:
+) -> Callable[[List[int]], List[psutil.Process]]:
+    def _get_processes(pids: List[int]) -> List[psutil.Process]:
         results = []
         for pid in pids:
             proc = psutil.Process(pid)
@@ -32,7 +32,7 @@ def mock__get_sibling_processes(
             results.append(proc)
         return results
 
-    def _(pids: list[int]) -> None:
+    def _(pids: List[int]) -> None:
         mocker.patch(
             "activity_monitor._get_sibling_processes", return_value=_get_processes(pids)
         )
@@ -42,7 +42,7 @@ def mock__get_sibling_processes(
 
 def test_cpu_usage_monitor_not_busy(
     socket_server: None,
-    mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
+    mock__get_sibling_processes: Callable[[List[int]], List[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
 ):
     activity_generator = create_activity_generator(network=False, cpu=False, disk=False)
@@ -59,7 +59,7 @@ def test_cpu_usage_monitor_not_busy(
 
 def test_cpu_usage_monitor_still_busy(
     socket_server: None,
-    mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
+    mock__get_sibling_processes: Callable[[List[int]], List[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
 ):
     activity_generator = create_activity_generator(network=False, cpu=True, disk=False)
@@ -76,7 +76,7 @@ def test_cpu_usage_monitor_still_busy(
 
 def test_disk_usage_monitor_not_busy(
     socket_server: None,
-    mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
+    mock__get_sibling_processes: Callable[[List[int]], List[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
 ):
     activity_generator = create_activity_generator(network=False, cpu=False, disk=False)
@@ -98,7 +98,7 @@ def test_disk_usage_monitor_not_busy(
 
 def test_disk_usage_monitor_still_busy(
     socket_server: None,
-    mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
+    mock__get_sibling_processes: Callable[[List[int]], List[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
 ):
     activity_generator = create_activity_generator(network=False, cpu=False, disk=True)
@@ -128,7 +128,7 @@ def mock_no_network_activity(mocker: MockFixture) -> None:
 def test_network_usage_monitor_not_busy(
     mock_no_network_activity: None,
     socket_server: None,
-    mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
+    mock__get_sibling_processes: Callable[[List[int]], List[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
 ):
     activity_generator = create_activity_generator(network=False, cpu=False, disk=False)
@@ -155,7 +155,7 @@ def mock_network_monitor_exclude_interfaces(mocker: MockFixture) -> None:
 def test_network_usage_monitor_still_busy(
     mock_network_monitor_exclude_interfaces: None,
     socket_server: None,
-    mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
+    mock__get_sibling_processes: Callable[[List[int]], List[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
 ):
     activity_generator = create_activity_generator(network=True, cpu=False, disk=False)
@@ -187,9 +187,6 @@ def test_http_server_ok(http_server: None, server_url: str):
     assert result.status_code == 200
 
 
-_BIG_THRESHOLD: Final[int] = int(1e10)
-
-
 @pytest.fixture
 def mock_activity_manager_config(mocker: MockFixture) -> None:
     mocker.patch("activity_monitor.MONITOR_INTERVAL_S", 1)
@@ -200,7 +197,7 @@ def mock_activity_manager_config(mocker: MockFixture) -> None:
 def test_activity_monitor_becomes_not_busy(
     mock_activity_manager_config: None,
     socket_server: None,
-    mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
+    mock__get_sibling_processes: Callable[[List[int]], List[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
     http_server: None,
     server_url: str,
