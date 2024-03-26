@@ -75,6 +75,7 @@ Note if your service defines it's own compose spec. `container` must be replaced
 In most cases you will easily configure this by adding the following to your `.osparc/service-name/runtime.yaml` file:
 
 ```yaml
+...
 callbacks-mapping:
   inactivity:
     service: container
