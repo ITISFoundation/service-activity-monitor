@@ -41,7 +41,7 @@ BUSY_USAGE_THRESHOLD_NETWORK_SENT: Final[int] = os.environ.get(
     f"{_ENV_VAR_PREFIX}_NETWORK_SENT__BPS", 1 * _TB
 )
 
-# The following flags disable different monitors
+# NOTE: set the following flags to disable a specific monitor
 DISABLE_JUPYTER_KERNEL_MONITOR: Final[bool] = (
     os.environ.get("DISABLE_JUPYTER_KERNEL_MONITOR", None) is not None
 )
