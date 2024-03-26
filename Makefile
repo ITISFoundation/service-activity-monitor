@@ -20,14 +20,11 @@ devenv: .venv  ## create a python virtual environment with tools to dev, run and
 	@echo "To activate the virtual environment, run 'source $</bin/activate'"
 
 
-requirements: devenv ## runs pip-tools to compile dependencies
-	# freezes requirements
-	pip-compile requirements/test.in --resolver=backtracking --output-file requirements/test.txt
-
 
 .PHONY: install-test
 install-test:	## install dependencies for testing
-	pip install -r requirements/test.txt
+	pip install -r requirements/test.in
+	pip list --verbose
 
 .PHONY: tests-dev
 tests-dev:	## run tests in development mode
