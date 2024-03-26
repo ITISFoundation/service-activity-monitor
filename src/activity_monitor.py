@@ -54,9 +54,8 @@ DISABLE_DISK_USAGE_MONITOR: Final[bool] = (
 DISABLE_NETWORK_USAGE_MONITOR: Final[bool] = (
     os.environ.get("DISABLE_NETWORK_USAGE_MONITOR", None) is not None
 )
+
 # Internals
-
-
 LISTEN_PORT: Final[int] = 19597
 KERNEL_CHECK_INTERVAL_S: Final[float] = 5
 CHECK_INTERVAL_S: Final[float] = 1
