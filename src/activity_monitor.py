@@ -609,7 +609,7 @@ class HTTPServerWithState(HTTPServer):
         super().__init__(server_address, RequestHandlerClass)
 
 
-class JSONRequestHandler(BaseHTTPRequestHandler):
+class MainRequestHandler(BaseHTTPRequestHandler):
     def _send_json(self, code: int, data: Any) -> None:
         self.send_response(code)
         self.send_header("Content-type", "application/json")
@@ -645,7 +645,7 @@ def make_server(port: int) -> HTTPServerWithState:
     state.activity_manager.start()
 
     server_address = ("", port)  # Listen on all interfaces, port 8000
-    return HTTPServerWithState(server_address, JSONRequestHandler, state)
+    return HTTPServerWithState(server_address, MainRequestHandler, state)
 
 
 def main():
