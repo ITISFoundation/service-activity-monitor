@@ -11,7 +11,7 @@ from contextlib import suppress
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
-from typing import Any, Dict, List, Tuple, Set
+from typing import Any, Dict, List, Tuple, Set, Union
 
 
 _TB: int = 1024 * 1024 * 1024 * 1024
@@ -73,12 +73,49 @@ _logger = logging.getLogger(__name__)
 
 
 ############### Utils
+
+
+_METRICS_COUNTER_TEMPLATE: str = """
+# HELP {name} {help}
+# TYPE {name} counter
+{name} {value}
+"""
+
+
+MetricEntry = Dict[str, Union[str, int]]
+
+
+class MetricsManager:
+    def __init__(self) -> None:
+        self._metrics: Dict[str, MetricEntry] = {}
+
+    def register_metric(
+        self, name: str, *, help: str, initial_value: Union[int, float]
+    ) -> None:
+        self._metrics[name] = {"help": help, "value": initial_value}
+
+    def inc_metric(self, name: str, value: Union[int, float]) -> None:
+        self._metrics[name]["value"] += value
+
+    def format_metrics(self) -> str:
+        result = ""
+
+        for name, metric_entry in self._metrics.items():
+            entry = _METRICS_COUNTER_TEMPLATE.format(
+                name=name, help=metric_entry["help"], value=metric_entry["value"]
+            )
+            result += f"\n{entry}\n"
+
+        return result
+
+
 class AbstractIsBusyMonitor:
-    def __init__(self, poll_interval: float) -> None:
+    def __init__(self, poll_interval: float, metrics: MetricsManager) -> None:
         self._poll_interval: float = poll_interval
         self._keep_running: bool = True
         self._thread: Thread | None = None
 
+        self.metrics = metrics
         self.is_busy: bool = True
         self.thread_executor = ThreadPoolExecutor(max_workers=_THREAD_EXECUTOR_WORKERS)
 
@@ -158,8 +195,8 @@ def _get_sibling_processes() -> List[psutil.Process]:
 
 
 class JupyterKernelMonitor(AbstractIsBusyMonitor):
-    def __init__(self, poll_interval: float) -> None:
-        super().__init__(poll_interval=poll_interval)
+    def __init__(self, poll_interval: float, metrics: MetricsManager) -> None:
+        super().__init__(poll_interval=poll_interval, metrics=metrics)
         self.are_kernels_busy: bool = False
 
     def _get(self, path: str) -> dict:
@@ -200,8 +237,10 @@ class CPUUsageMonitor(AbstractIsBusyMonitor):
     and averages over 1 second.
     """
 
-    def __init__(self, poll_interval: float, *, busy_threshold: float):
-        super().__init__(poll_interval=poll_interval)
+    def __init__(
+        self, poll_interval: float, metrics: MetricsManager, *, busy_threshold: float
+    ):
+        super().__init__(poll_interval=poll_interval, metrics=metrics)
         self.busy_threshold = busy_threshold
 
         # snapshot
@@ -270,11 +309,12 @@ class DiskUsageMonitor(AbstractIsBusyMonitor):
     def __init__(
         self,
         poll_interval: float,
+        metrics: MetricsManager,
         *,
         read_usage_threshold: int,
         write_usage_threshold: int,
     ):
-        super().__init__(poll_interval=poll_interval)
+        super().__init__(poll_interval=poll_interval, metrics=metrics)
         self.read_usage_threshold = read_usage_threshold
         self.write_usage_threshold = write_usage_threshold
 
@@ -369,11 +409,12 @@ class NetworkUsageMonitor(AbstractIsBusyMonitor):
     def __init__(
         self,
         poll_interval: float,
+        metrics: MetricsManager,
         *,
         received_usage_threshold: int,
         sent_usage_threshold: int,
     ):
-        super().__init__(poll_interval=poll_interval)
+        super().__init__(poll_interval=poll_interval, metrics=metrics)
         self.received_usage_threshold = received_usage_threshold
         self.sent_usage_threshold = sent_usage_threshold
 
@@ -382,6 +423,17 @@ class NetworkUsageMonitor(AbstractIsBusyMonitor):
         )
         self.bytes_received: BytesReceived = 0
         self.bytes_sent: BytesSent = 0
+
+        self.metrics.register_metric(
+            "network_bytes_received_total",
+            help="Total number of bytes received across all network interfaces.",
+            initial_value=0,
+        )
+        self.metrics.register_metric(
+            "network_bytes_sent_total",
+            help="Total number of bytes sent across all network interfaces.",
+            initial_value=0,
+        )
 
     def _sample_total_network_usage(
         self,
@@ -427,6 +479,9 @@ class NetworkUsageMonitor(AbstractIsBusyMonitor):
         self.bytes_received = bytes_received
         self.bytes_sent = bytes_sent
 
+        self.metrics.inc_metric("network_bytes_received_total", bytes_received)
+        self.metrics.inc_metric("network_bytes_sent_total", bytes_sent)
+
     def _check_if_busy(self) -> bool:
         self._update_total_network_usage()
         return (
@@ -456,14 +511,19 @@ class ActivityManager:
 
         self._monitors: list[AbstractIsBusyMonitor] = []
 
+        self.metrics = MetricsManager()
+
         if not DISABLE_JUPYTER_KERNEL_MONITOR:
             self._monitors.append(
-                JupyterKernelMonitor(JUPYTER_NOTEBOOK_KERNEL_CHECK_INTERVAL_S)
+                JupyterKernelMonitor(
+                    JUPYTER_NOTEBOOK_KERNEL_CHECK_INTERVAL_S, self.metrics
+                )
             )
         if not DISABLE_CPU_USAGE_MONITOR:
             self._monitors.append(
                 CPUUsageMonitor(
                     MONITOR_INTERVAL_S,
+                    self.metrics,
                     busy_threshold=BUSY_USAGE_THRESHOLD_CPU,
                 )
             )
@@ -471,6 +531,7 @@ class ActivityManager:
             self._monitors.append(
                 DiskUsageMonitor(
                     MONITOR_INTERVAL_S,
+                    self.metrics,
                     read_usage_threshold=BUSY_USAGE_THRESHOLD_DISK_READ,
                     write_usage_threshold=BUSY_USAGE_THRESHOLD_DISK_WRITE,
                 )
@@ -479,6 +540,7 @@ class ActivityManager:
             self._monitors.append(
                 NetworkUsageMonitor(
                     MONITOR_INTERVAL_S,
+                    self.metrics,
                     received_usage_threshold=BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED,
                     sent_usage_threshold=BUSY_USAGE_THRESHOLD_NETWORK_SENT,
                 )
@@ -505,6 +567,9 @@ class ActivityManager:
         for x in self._monitors:
             merged_dict.update(x.get_debug_entry())
         return merged_dict
+
+    def get_metrics(self) -> str:
+        return self.metrics.format_metrics()
 
     def _worker(self) -> None:
         while self._keep_running:
@@ -545,11 +610,17 @@ class HTTPServerWithState(HTTPServer):
 
 
 class JSONRequestHandler(BaseHTTPRequestHandler):
-    def _send_response(self, code: int, data: dict) -> None:
+    def _send_json(self, code: int, data: Any) -> None:
         self.send_response(code)
         self.send_header("Content-type", "application/json")
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
+
+    def _send_text(self, code: int, text: str) -> None:
+        self.send_response(code)
+        self.send_header("Content-type", "text/plain")
+        self.end_headers()
+        self.wfile.write(text.encode("utf-8"))
 
     @property
     def activity_manager(self) -> ActivityManager:
@@ -557,13 +628,15 @@ class JSONRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/activity":
-            self._send_response(
+            self._send_json(
                 200, {"seconds_inactive": self.activity_manager.get_idle_seconds()}
             )
         elif self.path == "/debug":
-            self._send_response(200, self.activity_manager.get_debug())
+            self._send_json(200, self.activity_manager.get_debug())
+        elif self.path == "/metrics":
+            self._send_text(200, self.activity_manager.get_metrics())
         else:  # Handle case where the endpoint is not found
-            self._send_response(404, {"error": "Resource not found"})
+            self._send_json(404, {"error": "Resource not found"})
 
 
 def make_server(port: int) -> HTTPServerWithState:
