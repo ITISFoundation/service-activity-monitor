@@ -11,7 +11,6 @@ install() {
   make .venv  
   source .venv/bin/activate
   make install-test
-  pip list --verbose
 }
 
 test() {

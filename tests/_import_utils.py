@@ -10,5 +10,3 @@ def allow_imports() -> None:
     path = (_CURRENT_DIR / "..." / ".." / ".." / "src").absolute().resolve()
     assert path.exists()
     sys.path.append(f"{path}")
-
-    import activity_monitor
