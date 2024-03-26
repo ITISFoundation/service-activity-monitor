@@ -175,19 +175,6 @@ def test_network_usage_monitor_still_busy(
         assert network_usage_monitor.is_busy is True
 
 
-@pytest.fixture
-def mock_jupyter_kernel_monitor(are_kernels_busy: bool) -> Iterable[None]:
-    with requests_mock.Mocker(real_http=True) as m:
-        m.get("http://localhost:8888/api/kernels", text=json.dumps([{"id": "atest1"}]))
-        m.get(
-            "http://localhost:8888/api/kernels/atest1",
-            text=json.dumps(
-                {"execution_state": "running" if are_kernels_busy else "idle"}
-            ),
-        )
-        yield
-
-
 @pytest.mark.parametrize("are_kernels_busy", [True, False])
 def test_jupyter_kernel_monitor(
     mock_jupyter_kernel_monitor: None, are_kernels_busy: bool
@@ -195,38 +182,6 @@ def test_jupyter_kernel_monitor(
     kernel_monitor = activity_monitor.JupyterKernelMonitor(1)
     kernel_monitor._update_kernels_activity()
     assert kernel_monitor.are_kernels_busy is are_kernels_busy
-
-
-@pytest.fixture
-def server_url() -> str:
-    return f"http://localhost:{activity_monitor.LISTEN_PORT}"
-
-
-@pytest.fixture
-def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> None:
-    server = activity_monitor.make_server(activity_monitor.LISTEN_PORT)
-
-    def _run_server_worker() -> None:
-        server.serve_forever()
-
-    thread = threading.Thread(target=_run_server_worker, daemon=True)
-    thread.start()
-
-    # ensure server is running
-    for attempt in Retrying(
-        stop=stop_after_delay(3), wait=wait_fixed(0.1), reraise=True
-    ):
-        with attempt:
-            result = requests.get(f"{server_url}/activity", timeout=1)
-            assert result.status_code == 200, result.text
-
-    yield None
-
-    server.shutdown()
-    server.server_close()
-
-    with pytest.raises(requests.exceptions.RequestException):
-        requests.get(f"{server_url}/activity", timeout=1)
 
 
 @pytest.mark.parametrize("are_kernels_busy", [False])
@@ -240,13 +195,8 @@ _BIG_THRESHOLD: Final[int] = int(1e10)
 
 @pytest.fixture
 def mock_activity_manager_config(mocker: MockFixture) -> None:
-    mocker.patch("activity_monitor.CHECK_INTERVAL_S", 1)
-    mocker.patch("activity_monitor.KERNEL_CHECK_INTERVAL_S", 1)
-
-    mocker.patch(
-        "activity_monitor.BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED", _BIG_THRESHOLD
-    )
-    mocker.patch("activity_monitor.BUSY_USAGE_THRESHOLD_NETWORK_SENT", _BIG_THRESHOLD)
+    mocker.patch("activity_monitor.MONITOR_INTERVAL_S", 1)
+    mocker.patch("activity_monitor.JUPYTER_NOTEBOOK_KERNEL_CHECK_INTERVAL_S", 1)
 
 
 @pytest.mark.parametrize("are_kernels_busy", [False])

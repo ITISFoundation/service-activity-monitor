@@ -15,47 +15,58 @@ from typing import Final, Any
 
 
 _TB: Final[int] = 1024 * 1024 * 1024 * 1024
-_ENV_VAR_PREFIX: Final[str] = "ACTIVITY_MONITOR_BUSY_THRESHOLD"
+_ENV_VAR_PREFIX: Final[str] = "ACTIVITY_MONITOR"
 
 # NOTE: using high thresholds to make service by default
 # considered inactive.
 # If the service owner does not change these, by lowering
 # them to an adequate value the service will always be shut
 # down as soon as the inactivity period is detected.
+_THRESHOLD_PREFIX: Final[str] = f"{_ENV_VAR_PREFIX}_BUSY_THRESHOLD"
 BUSY_USAGE_THRESHOLD_CPU: Final[float] = os.environ.get(
-    f"{_ENV_VAR_PREFIX}_CPU_PERCENT", 1000
+    f"{_THRESHOLD_PREFIX}_CPU_PERCENT", 1000
 )
 BUSY_USAGE_THRESHOLD_DISK_READ: Final[int] = os.environ.get(
-    f"{_ENV_VAR_PREFIX}_DISK_READ_BPS", 1 * _TB
+    f"{_THRESHOLD_PREFIX}_DISK_READ_BPS", 1 * _TB
 )
 BUSY_USAGE_THRESHOLD_DISK_WRITE: Final[int] = os.environ.get(
-    f"{_ENV_VAR_PREFIX}_DISK_WRITE_BPS", 1 * _TB
+    f"{_THRESHOLD_PREFIX}_DISK_WRITE_BPS", 1 * _TB
 )
 BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED: Final[int] = os.environ.get(
-    f"{_ENV_VAR_PREFIX}_NETWORK_RECEIVE_BPS", 1 * _TB
+    f"{_THRESHOLD_PREFIX}_NETWORK_RECEIVE_BPS", 1 * _TB
 )
 BUSY_USAGE_THRESHOLD_NETWORK_SENT: Final[int] = os.environ.get(
-    f"{_ENV_VAR_PREFIX}_NETWORK_SENT__BPS", 1 * _TB
+    f"{_THRESHOLD_PREFIX}_NETWORK_SENT__BPS", 1 * _TB
 )
 
 # NOTE: set the following flags to disable a specific monitor
 DISABLE_JUPYTER_KERNEL_MONITOR: Final[bool] = (
-    os.environ.get("DISABLE_JUPYTER_KERNEL_MONITOR", None) is not None
+    os.environ.get(f"{_ENV_VAR_PREFIX}_DISABLE_JUPYTER_KERNEL_MONITOR", None)
+    is not None
 )
 DISABLE_CPU_USAGE_MONITOR: Final[bool] = (
-    os.environ.get("DISABLE_CPU_USAGE_MONITOR", None) is not None
+    os.environ.get(f"{_ENV_VAR_PREFIX}_DISABLE_CPU_USAGE_MONITOR", None) is not None
 )
 DISABLE_DISK_USAGE_MONITOR: Final[bool] = (
-    os.environ.get("DISABLE_DISK_USAGE_MONITOR", None) is not None
+    os.environ.get(f"{_ENV_VAR_PREFIX}_DISABLE_DISK_USAGE_MONITOR", None) is not None
 )
 DISABLE_NETWORK_USAGE_MONITOR: Final[bool] = (
-    os.environ.get("DISABLE_NETWORK_USAGE_MONITOR", None) is not None
+    os.environ.get(f"{_ENV_VAR_PREFIX}_DISABLE_NETWORK_USAGE_MONITOR", None) is not None
 )
 
+# NOTE: Other configuration options
+JUPYTER_NOTEBOOK_BASE_URL: Final[str] = os.environ.get(
+    f"{_ENV_VAR_PREFIX}_JUPYTER_NOTEBOOK_BASE_URL", "http://localhost:8888"
+)
+JUPYTER_NOTEBOOK_KERNEL_CHECK_INTERVAL_S: Final[float] = float(
+    os.environ.get(f"{_ENV_VAR_PREFIX}_JUPYTER_NOTEBOOK_KERNEL_CHECK_INTERVAL_S", 5)
+)
+MONITOR_INTERVAL_S: Final[float] = float(
+    os.environ.get(f"{_ENV_VAR_PREFIX}_MONITOR_INTERVAL_S", 1)
+)
+LISTEN_PORT: Final[int] = int(os.environ.get(f"{_ENV_VAR_PREFIX}_LISTEN_PORT", 19597))
+
 # Internals
-LISTEN_PORT: Final[int] = 19597
-KERNEL_CHECK_INTERVAL_S: Final[float] = 5
-CHECK_INTERVAL_S: Final[float] = 1
 _THREAD_EXECUTOR_WORKERS: Final[int] = 10
 
 _logger = logging.getLogger(__name__)
@@ -147,15 +158,14 @@ def _get_sibling_processes() -> list[psutil.Process]:
 
 
 class JupyterKernelMonitor(AbstractIsBusyMonitor):
-    BASE_URL = "http://localhost:8888"
-    HEADERS = {"accept": "application/json"}
-
     def __init__(self, poll_interval: float) -> None:
         super().__init__(poll_interval=poll_interval)
         self.are_kernels_busy: bool = False
 
     def _get(self, path: str) -> dict:
-        r = requests.get(f"{self.BASE_URL}{path}", headers=self.HEADERS)
+        r = requests.get(
+            f"{JUPYTER_NOTEBOOK_BASE_URL}{path}", headers={"accept": "application/json"}
+        )
         return r.json()
 
     def _update_kernels_activity(self) -> None:
@@ -447,18 +457,20 @@ class ActivityManager:
         self._monitors: list[AbstractIsBusyMonitor] = []
 
         if not DISABLE_JUPYTER_KERNEL_MONITOR:
-            self._monitors.append(JupyterKernelMonitor(KERNEL_CHECK_INTERVAL_S))
+            self._monitors.append(
+                JupyterKernelMonitor(JUPYTER_NOTEBOOK_KERNEL_CHECK_INTERVAL_S)
+            )
         if not DISABLE_CPU_USAGE_MONITOR:
             self._monitors.append(
                 CPUUsageMonitor(
-                    CHECK_INTERVAL_S,
+                    MONITOR_INTERVAL_S,
                     busy_threshold=BUSY_USAGE_THRESHOLD_CPU,
                 )
             )
         if not DISABLE_DISK_USAGE_MONITOR:
             self._monitors.append(
                 DiskUsageMonitor(
-                    CHECK_INTERVAL_S,
+                    MONITOR_INTERVAL_S,
                     read_usage_threshold=BUSY_USAGE_THRESHOLD_DISK_READ,
                     write_usage_threshold=BUSY_USAGE_THRESHOLD_DISK_WRITE,
                 )
@@ -466,7 +478,7 @@ class ActivityManager:
         if not DISABLE_NETWORK_USAGE_MONITOR:
             self._monitors.append(
                 NetworkUsageMonitor(
-                    CHECK_INTERVAL_S,
+                    MONITOR_INTERVAL_S,
                     received_usage_threshold=BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED,
                     sent_usage_threshold=BUSY_USAGE_THRESHOLD_NETWORK_SENT,
                 )
@@ -556,7 +568,7 @@ class JSONRequestHandler(BaseHTTPRequestHandler):
 
 def make_server(port: int) -> HTTPServerWithState:
     state = ServerState()
-    state.activity_manager = ActivityManager(CHECK_INTERVAL_S)
+    state.activity_manager = ActivityManager(MONITOR_INTERVAL_S)
     state.activity_manager.start()
 
     server_address = ("", port)  # Listen on all interfaces, port 8000

@@ -1,14 +1,27 @@
 import ctypes
 import pytest
 import socket
+import json
 import threading
 import time
+import requests
+import requests_mock
 
 from concurrent.futures import ThreadPoolExecutor, wait
 from multiprocessing import Array, Process
 from tempfile import NamedTemporaryFile
+from tenacity import Retrying
+from tenacity.stop import stop_after_delay
+from tenacity.wait import wait_fixed
+from typing import Callable, Final, Iterable, TYPE_CHECKING
 
-from typing import Callable, Final, Iterable
+if TYPE_CHECKING:
+    from ..docker import activity_monitor
+else:
+    from _import_utils import allow_imports
+
+    allow_imports()
+    import activity_monitor
 
 
 _LOCAL_LISTEN_PORT: Final[int] = 12345
@@ -133,3 +146,48 @@ def create_activity_generator() -> (
 
     for instance in created:
         instance.stop()
+
+
+@pytest.fixture
+def mock_jupyter_kernel_monitor(are_kernels_busy: bool) -> Iterable[None]:
+    with requests_mock.Mocker(real_http=True) as m:
+        m.get("http://localhost:8888/api/kernels", text=json.dumps([{"id": "atest1"}]))
+        m.get(
+            "http://localhost:8888/api/kernels/atest1",
+            text=json.dumps(
+                {"execution_state": "running" if are_kernels_busy else "idle"}
+            ),
+        )
+        yield
+
+
+@pytest.fixture
+def server_url() -> str:
+    return f"http://localhost:{activity_monitor.LISTEN_PORT}"
+
+
+@pytest.fixture
+def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> None:
+    server = activity_monitor.make_server(activity_monitor.LISTEN_PORT)
+
+    def _run_server_worker() -> None:
+        server.serve_forever()
+
+    thread = threading.Thread(target=_run_server_worker, daemon=True)
+    thread.start()
+
+    # ensure server is running
+    for attempt in Retrying(
+        stop=stop_after_delay(3), wait=wait_fixed(0.1), reraise=True
+    ):
+        with attempt:
+            result = requests.get(f"{server_url}/activity", timeout=1)
+            assert result.status_code == 200, result.text
+
+    yield None
+
+    server.shutdown()
+    server.server_close()
+
+    with pytest.raises(requests.exceptions.RequestException):
+        requests.get(f"{server_url}/activity", timeout=1)
