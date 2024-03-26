@@ -1,12 +1,9 @@
-import json
 import psutil
 import pytest
 import requests
-import requests_mock
-import threading
 import time
 
-from typing import Callable, Final, Iterable, TYPE_CHECKING
+from typing import Callable, Final, TYPE_CHECKING
 from pytest_mock import MockFixture
 from tenacity import Retrying
 from tenacity.stop import stop_after_delay
