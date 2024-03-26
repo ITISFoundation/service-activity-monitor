@@ -221,7 +221,7 @@ async def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> Non
         stop=stop_after_delay(3), wait=wait_fixed(0.1), reraise=True
     ):
         with attempt:
-            result = requests.get(f"{server_url}/", timeout=1)
+            result = requests.get(f"{server_url}/activity", timeout=1)
             assert result.status_code == 200, result.text
 
     yield None
@@ -230,12 +230,12 @@ async def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> Non
     server.server_close()
 
     with pytest.raises(requests.exceptions.RequestException):
-        requests.get(f"{server_url}/", timeout=1)
+        requests.get(f"{server_url}/activity", timeout=1)
 
 
 @pytest.mark.parametrize("are_kernels_busy", [False])
 async def test_http_server_ok(http_server: None, server_url: str):
-    result = requests.get(f"{server_url}/", timeout=5)
+    result = requests.get(f"{server_url}/activity", timeout=1)
     assert result.status_code == 200
 
 
@@ -270,7 +270,7 @@ async def test_activity_monitor_becomes_not_busy(
     ):
         with attempt:
             # check that all become not busy
-            result = requests.get(f"{server_url}/debug", timeout=5)
+            result = requests.get(f"{server_url}/debug", timeout=1)
             assert result.status_code == 200
             debug_response = result.json()
             assert debug_response["cpu_usage"]["is_busy"] is False
@@ -278,7 +278,7 @@ async def test_activity_monitor_becomes_not_busy(
             assert debug_response["kernel_monitor"]["is_busy"] is False
             assert debug_response["network_usage"]["is_busy"] is False
 
-            result = requests.get(f"{server_url}/", timeout=2)
+            result = requests.get(f"{server_url}/activity", timeout=1)
             assert result.status_code == 200
             response = result.json()
             assert response["seconds_inactive"] > 0

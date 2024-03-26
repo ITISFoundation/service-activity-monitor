@@ -3,6 +3,7 @@ import logging
 import psutil
 import requests
 import time
+import os
 
 from abc import abstractmethod
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -13,25 +14,43 @@ from threading import Thread
 from typing import Final
 
 
-_logger = logging.getLogger(__name__)
+_KB: Final[int] = 1024
+_MB: Final[int] = 1024 * _KB
+_GB: Final[int] = 1024 * _MB
+_TB: Final[int] = 1024 * _GB
+_ENV_VAR_PREFIX: Final[str] = "ACTIVITY_MONITOR_BUSY_THRESHOLD"
+
+# NOTE: using high thresholds to make service by default
+# considered inactive.
+# If the service owner does not change these, by lowering
+# them to an adequate value the service will always be shut
+# down as soon as the inactivity period is detected.
+BUSY_USAGE_THRESHOLD_CPU: Final[float] = os.environ.get(
+    f"{_ENV_VAR_PREFIX}_CPU_PERCENT", 1000
+)
+BUSY_USAGE_THRESHOLD_DISK_READ: Final[int] = os.environ.get(
+    f"{_ENV_VAR_PREFIX}_DISK_READ_BPS", 1 * _TB
+)
+BUSY_USAGE_THRESHOLD_DISK_WRITE: Final[int] = os.environ.get(
+    f"{_ENV_VAR_PREFIX}_DISK_WRITE_BPS", 1 * _TB
+)
+BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED: Final[int] = os.environ.get(
+    f"{_ENV_VAR_PREFIX}_NETWORK_RECEIVE_BPS", 1 * _TB
+)
+BUSY_USAGE_THRESHOLD_NETWORK_SENT: Final[int] = os.environ.get(
+    f"{_ENV_VAR_PREFIX}_NETWORK_SENT__BPS", 1 * _TB
+)
 
 
 LISTEN_PORT: Final[int] = 19597
-
 KERNEL_CHECK_INTERVAL_S: Final[float] = 5
 CHECK_INTERVAL_S: Final[float] = 1
-THREAD_EXECUTOR_WORKERS: Final[int] = 10
+_THREAD_EXECUTOR_WORKERS: Final[int] = 10
 
-_KB: Final[int] = 1024
-
-BUSY_USAGE_THRESHOLD_CPU: Final[float] = 0.5  # percent in range [0, 100]
-BUSY_USAGE_THRESHOLD_DISK_READ: Final[int] = 0
-BUSY_USAGE_THRESHOLD_DISK_WRITE: Final[int] = 0
-BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED: Final[int] = 1 * _KB
-BUSY_USAGE_THRESHOLD_NETWORK_SENT: Final[int] = 1 * _KB
+_logger = logging.getLogger(__name__)
 
 
-# Utilities
+############### Utils
 class AbstractIsBusyMonitor:
     def __init__(self, poll_interval: float) -> None:
         self._poll_interval: float = poll_interval
@@ -39,7 +58,7 @@ class AbstractIsBusyMonitor:
         self._thread: Thread | None = None
 
         self.is_busy: bool = True
-        self.thread_executor = ThreadPoolExecutor(max_workers=THREAD_EXECUTOR_WORKERS)
+        self.thread_executor = ThreadPoolExecutor(max_workers=_THREAD_EXECUTOR_WORKERS)
 
     @abstractmethod
     def _check_if_busy(self) -> bool:
@@ -105,7 +124,7 @@ def _get_sibling_processes() -> list[psutil.Process]:
     return [c for c in all_children if c.pid != current_process.pid]
 
 
-# Monitors
+############### Monitors
 
 
 class JupyterKernelMonitor(AbstractIsBusyMonitor):
@@ -442,7 +461,14 @@ class ActivityManager:
         self._thread.join()
 
 
-def _get_response_debug(activity_manager: ActivityManager) -> dict:
+############### Http Server
+
+
+def _get_activity_response(activity_manager: ActivityManager) -> dict:
+    return {"seconds_inactive": activity_manager.get_idle_seconds()}
+
+
+def _get_debug_response(activity_manager: ActivityManager) -> dict:
     return {
         "seconds_inactive": activity_manager.get_idle_seconds(),
         "cpu_usage": {
@@ -467,10 +493,6 @@ def _get_response_debug(activity_manager: ActivityManager) -> dict:
     }
 
 
-def _get_response_root(activity_manager: ActivityManager) -> dict:
-    return {"seconds_inactive": activity_manager.get_idle_seconds()}
-
-
 class ServerState:
     pass
 
@@ -488,17 +510,17 @@ class JSONRequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(json.dumps(data).encode("utf-8"))
 
-    def do_GET(self):
-        state = self.server.state
+    @property
+    def activity_manager(self) -> ActivityManager:
+        return self.server.state.activity_manager
 
-        if self.path == "/":  # The root endpoint
-            self._send_response(200, _get_response_root(state.activity_manager))
-        elif self.path == "/debug":  # The debug endpoint
-            self._send_response(200, _get_response_debug(state.activity_manager))
+    def do_GET(self):
+        if self.path == "/activity":
+            self._send_response(200, _get_activity_response(self.activity_manager))
+        elif self.path == "/debug":
+            self._send_response(200, _get_debug_response(self.activity_manager))
         else:  # Handle case where the endpoint is not found
-            self._send_response(
-                404, _get_response_debug({"error": "Resource not found"})
-            )
+            self._send_response(404, {"error": "Resource not found"})
 
 
 def make_server(port: int) -> HTTPServerWithState:
