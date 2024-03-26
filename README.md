@@ -2,11 +2,15 @@
 
 Tooling for monitoring processes activity inside a docker container. Depends on python and the well supported `psutil` package.
 
-Currently supported:
-- child process cpu usage
-- child process disk usage
-- overall container network usage
-- jupyter kernel activity
+Monitors:
+  - child process cpu usage
+  - child process disk usage
+  - overall container network usage
+  - jupyter kernel activity
+
+Exposes Prometheus metrics regarding:
+  - total outgoing network usage
+  - total incoming network usage
 
 # Quick-ish start
 
