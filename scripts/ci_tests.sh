@@ -10,7 +10,7 @@ IFS=$'\n\t'
 install() {
   make .venv  
   source .venv/bin/activate
-  make install-test
+  pip install -r requirements/test.in
   pip list --verbose
 }
 
