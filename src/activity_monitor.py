@@ -14,10 +14,7 @@ from threading import Thread
 from typing import Final, Any
 
 
-_KB: Final[int] = 1024
-_MB: Final[int] = 1024 * _KB
-_GB: Final[int] = 1024 * _MB
-_TB: Final[int] = 1024 * _GB
+_TB: Final[int] = 1024 * 1024 * 1024 * 1024
 _ENV_VAR_PREFIX: Final[str] = "ACTIVITY_MONITOR_BUSY_THRESHOLD"
 
 # NOTE: using high thresholds to make service by default
