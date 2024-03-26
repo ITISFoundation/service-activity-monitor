@@ -104,7 +104,7 @@ class MetricsManager:
             entry = _METRICS_COUNTER_TEMPLATE.format(
                 name=name, help=metric_entry["help"], value=metric_entry["value"]
             )
-            result += f"\n{entry}\n"
+            result += f"{entry}"
 
         return result
 
