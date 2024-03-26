@@ -10,11 +10,18 @@ on:
 
 jobs:
   tests:
+    strategy:
+      matrix:
+        python-version: [3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12]
     runs-on: ubuntu-latest
     steps:
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
       - name: Checkout repo content
         uses: actions/checkout@v2
-      - name: install dependencies
+      - name: Install dependencies
         run: ./scripts/ci_tests.sh install
-      - name: run tests
+      - name: Run tests
         run: ./scripts/ci_tests.sh test
