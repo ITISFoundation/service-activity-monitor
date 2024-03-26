@@ -36,11 +36,21 @@ tests-ci:	## run testds in the CI
 
 
 .PHONY: release
-release:	## triggers the CI to create a new release from the tag, usage: `make release tag=TAG`
-	@echo "Releasing: '${tag}'"
-	git tag "${tag}"
-	git push
-	git push --tags
+release:	## triggers the CI to create a new release from the tag, usage: `make release tag=vX.X.X`
+	@git fetch --tags
+	@if git tag -l | grep -q "^${tag}$$"; then \
+		echo "Tag '${tag}' already exists. Exiting."; \
+		exit 1; \
+	fi
+	@echo "Releasing: '${tag}'. Is this correct? (y/n)"
+	@read -r answer; \
+	if [ "$$answer" != "y" ]; then \
+		echo "Exiting."; \
+		exit 1; \
+	fi
+	@git tag "${tag}"
+	@git push
+	@git push --tags
 
 .PHONY: help
 help: ## this colorful help

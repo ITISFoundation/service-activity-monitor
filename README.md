@@ -126,10 +126,27 @@ Used for debugging and not used by oSPARC
 
 ```json
 {
-  "kernel_monitor": {"is_busy": true}, 
-  "cpu_usage": {"is_busy": false, "total": 0}, 
-  "disk_usage": {"is_busy": false, "total": {"bytes_read_per_second": 0, "bytes_write_per_second": 0}}, 
-  "network_usage": {"is_busy": false, "total": {"bytes_received_per_second": 345452, "bytes_sent_per_second": 343809}}
+  "kernel_monitor": {
+    "is_busy": true
+  }, 
+  "cpu_usage": {
+    "is_busy": false, 
+    "total": 0
+  }, 
+  "disk_usage": {
+    "is_busy": false,
+    "total": {
+      "bytes_read_per_second": 0,
+      "bytes_write_per_second": 0
+    }
+  }, 
+  "network_usage": {
+    "is_busy": false, 
+    "total": {
+      "bytes_received_per_second": 345452, 
+      "bytes_sent_per_second": 343809
+    }
+  }
 }
 ```
 
@@ -153,4 +170,16 @@ network_bytes_sent_total 22893843
 
 ```bash
 curl http://localhost:19597/metrics
+```
+
+---
+
+# Releasing
+
+To create a new release just add a new tag (in the format `vX.X.X`) to a commit and push it. The CI will take care of creating the release.
+
+To tag the current git commit and trigger a release run:
+
+```bash
+make release tag=vX.X.X
 ```
