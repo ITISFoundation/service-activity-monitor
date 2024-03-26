@@ -100,7 +100,7 @@ callbacks-mapping:
 
 
 
-# API
+# Exposed API
 
 
 ### `GET /activity`
