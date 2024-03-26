@@ -1,6 +1,11 @@
 # service-activity-monitor
 
-Tooling for monitoring processes activity inside a docker container. Depends on python and the well supported `psutil` package.
+
+[![Python Versions](https://img.shields.io/badge/Tested%20against%20Python-3.6%20to%203.12-green?logo=python&style=flat-square)](https://www.python.org/downloads/)
+
+
+
+Tooling for monitoring processes activity inside a docker container. Depends on python and the well supported `psutil` package. 
 
 Monitors:
   - child process cpu usage
