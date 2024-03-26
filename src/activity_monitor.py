@@ -36,7 +36,7 @@ BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED: int = os.environ.get(
     f"{_THRESHOLD_PREFIX}_NETWORK_RECEIVE_BPS", 1 * _TB
 )
 BUSY_USAGE_THRESHOLD_NETWORK_SENT: int = os.environ.get(
-    f"{_THRESHOLD_PREFIX}_NETWORK_SENT__BPS", 1 * _TB
+    f"{_THRESHOLD_PREFIX}_NETWORK_SENT_BPS", 1 * _TB
 )
 
 # NOTE: set the following flags to disable a specific monitor
