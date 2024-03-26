@@ -25,11 +25,8 @@ psutil==5.9.8
 pytest==8.1.1
     # via
     #   -r requirements/test.in
-    #   pytest-asyncio
     #   pytest-cov
     #   pytest-mock
-pytest-asyncio==0.23.6
-    # via -r requirements/test.in
 pytest-cov==4.1.0
     # via -r requirements/test.in
 pytest-mock==3.12.0
@@ -48,7 +45,5 @@ tomli==2.0.1
     # via
     #   coverage
     #   pytest
-tornado==6.4
-    # via -r requirements/test.in
 urllib3==2.2.1
     # via requests

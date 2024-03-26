@@ -1,12 +1,10 @@
-# from jupyter
+# required packages
 
 psutil
-tornado
 
 # testing
 
 pytest
-pytest-asyncio
 pytest-cov
 pytest-mock
 requests

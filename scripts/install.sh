@@ -15,7 +15,7 @@ IFS=$'\n\t'
 # Function to display usage information
 usage() {
     echo "Usage: $0 <tag>"
-    echo "Example: $0 v.0.0.9-debug"
+    echo "Example: $0 v.0.0.1"
     exit 1
 }
 
@@ -24,22 +24,23 @@ if [ $# -ne 1 ]; then
     usage
 fi
 
-TAG=$1
-URL="https://github.com/ITISFoundation/service-activity-monitor/releases/download/$TAG/release_archive_$TAG.zip"
 
 # Download and install
+TAG=$1
+URL="https://github.com/ITISFoundation/service-activity-monitor/releases/download/$TAG/release_archive_$TAG.zip"
 echo "Downloading release $TAG..."
 curl -sSL -o /tmp/release.zip "$URL"
 
-echo "Extracting files..."
+echo "Installing..."
+
+# python scripts
 mkdir -p /usr/local/bin/service-monitor
 unzip -q /tmp/release.zip -d /usr/local/bin/service-monitor
+# requirements
+pip install psutil
 
-echo "Installing..."
-# Here you can write your installation steps, for now let's just echo the installation is complete
 echo "Installation complete."
 
 # Cleanup
 rm /tmp/release.zip
-
 echo "Done!"

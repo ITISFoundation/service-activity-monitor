@@ -1,8 +1,6 @@
-import asyncio
 import json
 import psutil
 import pytest
-import pytest_asyncio
 import requests
 import requests_mock
 import threading
@@ -10,7 +8,7 @@ import time
 
 from typing import Callable, Final, Iterable, TYPE_CHECKING
 from pytest_mock import MockFixture
-from tenacity import AsyncRetrying
+from tenacity import Retrying
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_fixed
 from conftest import _ActivityGenerator
@@ -23,8 +21,6 @@ else:
 
     allow_imports()
     import activity_monitor
-
-pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture
@@ -47,7 +43,7 @@ def mock__get_sibling_processes(
     return _
 
 
-async def test_cpu_usage_monitor_not_busy(
+def test_cpu_usage_monitor_not_busy(
     socket_server: None,
     mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
@@ -56,7 +52,7 @@ async def test_cpu_usage_monitor_not_busy(
     mock__get_sibling_processes([activity_generator.get_pid()])
 
     with activity_monitor.CPUUsageMonitor(1, busy_threshold=5) as cpu_usage_monitor:
-        async for attempt in AsyncRetrying(
+        for attempt in Retrying(
             stop=stop_after_delay(5), wait=wait_fixed(0.1), reraise=True
         ):
             with attempt:
@@ -64,7 +60,7 @@ async def test_cpu_usage_monitor_not_busy(
                 assert cpu_usage_monitor.is_busy is False
 
 
-async def test_cpu_usage_monitor_still_busy(
+def test_cpu_usage_monitor_still_busy(
     socket_server: None,
     mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
@@ -74,14 +70,14 @@ async def test_cpu_usage_monitor_still_busy(
 
     with activity_monitor.CPUUsageMonitor(0.5, busy_threshold=5) as cpu_usage_monitor:
         # wait for monitor to trigger
-        await asyncio.sleep(1)
+        time.sleep(1)
 
         # must still result busy
         assert cpu_usage_monitor.total_cpu_usage > 0
         assert cpu_usage_monitor.is_busy is True
 
 
-async def test_disk_usage_monitor_not_busy(
+def test_disk_usage_monitor_not_busy(
     socket_server: None,
     mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
@@ -92,7 +88,7 @@ async def test_disk_usage_monitor_not_busy(
     with activity_monitor.DiskUsageMonitor(
         0.5, read_usage_threshold=0, write_usage_threshold=0
     ) as disk_usage_monitor:
-        async for attempt in AsyncRetrying(
+        for attempt in Retrying(
             stop=stop_after_delay(5), wait=wait_fixed(0.1), reraise=True
         ):
             with attempt:
@@ -103,7 +99,7 @@ async def test_disk_usage_monitor_not_busy(
                 assert disk_usage_monitor.is_busy is False
 
 
-async def test_disk_usage_monitor_still_busy(
+def test_disk_usage_monitor_still_busy(
     socket_server: None,
     mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
     create_activity_generator: Callable[[bool, bool, bool], _ActivityGenerator],
@@ -115,7 +111,7 @@ async def test_disk_usage_monitor_still_busy(
         0.5, read_usage_threshold=0, write_usage_threshold=0
     ) as disk_usage_monitor:
         # wait for monitor to trigger
-        await asyncio.sleep(1)
+        time.sleep(1)
         write_bytes = disk_usage_monitor.total_bytes_write
         # NOTE: due to os disk cache reading is not reliable not testing it
         assert write_bytes > 0
@@ -132,7 +128,7 @@ def mock_no_network_activity(mocker: MockFixture) -> None:
     )
 
 
-async def test_network_usage_monitor_not_busy(
+def test_network_usage_monitor_not_busy(
     mock_no_network_activity: None,
     socket_server: None,
     mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
@@ -144,7 +140,7 @@ async def test_network_usage_monitor_not_busy(
     with activity_monitor.NetworkUsageMonitor(
         0.5, received_usage_threshold=0, sent_usage_threshold=0
     ) as network_usage_monitor:
-        async for attempt in AsyncRetrying(
+        for attempt in Retrying(
             stop=stop_after_delay(5), wait=wait_fixed(0.1), reraise=True
         ):
             with attempt:
@@ -159,7 +155,7 @@ def mock_network_monitor_exclude_interfaces(mocker: MockFixture) -> None:
     assert activity_monitor.NetworkUsageMonitor._EXCLUDE_INTERFACES == set()
 
 
-async def test_network_usage_monitor_still_busy(
+def test_network_usage_monitor_still_busy(
     mock_network_monitor_exclude_interfaces: None,
     socket_server: None,
     mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
@@ -172,7 +168,7 @@ async def test_network_usage_monitor_still_busy(
         0.5, received_usage_threshold=0, sent_usage_threshold=0
     ) as network_usage_monitor:
         # wait for monitor to trigger
-        await asyncio.sleep(1)
+        time.sleep(1)
 
         assert network_usage_monitor.bytes_received > 0
         assert network_usage_monitor.bytes_sent > 0
@@ -193,7 +189,7 @@ def mock_jupyter_kernel_monitor(are_kernels_busy: bool) -> Iterable[None]:
 
 
 @pytest.mark.parametrize("are_kernels_busy", [True, False])
-async def test_jupyter_kernel_monitor(
+def test_jupyter_kernel_monitor(
     mock_jupyter_kernel_monitor: None, are_kernels_busy: bool
 ):
     kernel_monitor = activity_monitor.JupyterKernelMonitor(1)
@@ -201,13 +197,13 @@ async def test_jupyter_kernel_monitor(
     assert kernel_monitor.are_kernels_busy is are_kernels_busy
 
 
-@pytest_asyncio.fixture
-async def server_url() -> str:
+@pytest.fixture
+def server_url() -> str:
     return f"http://localhost:{activity_monitor.LISTEN_PORT}"
 
 
-@pytest_asyncio.fixture
-async def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> None:
+@pytest.fixture
+def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> None:
     server = activity_monitor.make_server(activity_monitor.LISTEN_PORT)
 
     def _run_server_worker() -> None:
@@ -217,7 +213,7 @@ async def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> Non
     thread.start()
 
     # ensure server is running
-    async for attempt in AsyncRetrying(
+    for attempt in Retrying(
         stop=stop_after_delay(3), wait=wait_fixed(0.1), reraise=True
     ):
         with attempt:
@@ -234,7 +230,7 @@ async def http_server(mock_jupyter_kernel_monitor: None, server_url: str) -> Non
 
 
 @pytest.mark.parametrize("are_kernels_busy", [False])
-async def test_http_server_ok(http_server: None, server_url: str):
+def test_http_server_ok(http_server: None, server_url: str):
     result = requests.get(f"{server_url}/activity", timeout=1)
     assert result.status_code == 200
 
@@ -254,7 +250,7 @@ def mock_activity_manager_config(mocker: MockFixture) -> None:
 
 
 @pytest.mark.parametrize("are_kernels_busy", [False])
-async def test_activity_monitor_becomes_not_busy(
+def test_activity_monitor_becomes_not_busy(
     mock_activity_manager_config: None,
     socket_server: None,
     mock__get_sibling_processes: Callable[[list[int]], list[psutil.Process]],
@@ -265,7 +261,7 @@ async def test_activity_monitor_becomes_not_busy(
     activity_generator = create_activity_generator(network=False, cpu=False, disk=False)
     mock__get_sibling_processes([activity_generator.get_pid()])
 
-    async for attempt in AsyncRetrying(
+    for attempt in Retrying(
         stop=stop_after_delay(10), wait=wait_fixed(0.1), reraise=True
     ):
         with attempt:
