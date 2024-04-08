@@ -185,6 +185,8 @@ To create a new release just add a new tag (in the format `vX.X.X`) to a commit 
 
 To tag the current git commit and trigger a release run:
 
+**KNOWN ISSUE:** please push all your commits and wait for the CI to go green before making a new release. If the CI is read the release will still be created.
+
 ```bash
 make release tag=vX.X.X
 ```
