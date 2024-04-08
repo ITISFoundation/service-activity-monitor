@@ -132,24 +132,41 @@ Used for debugging and not used by oSPARC
 ```json
 {
   "kernel_monitor": {
-    "is_busy": true
-  }, 
-  "cpu_usage": {
-    "is_busy": false, 
-    "total": 0
-  }, 
-  "disk_usage": {
     "is_busy": false,
-    "total": {
-      "bytes_read_per_second": 0,
-      "bytes_write_per_second": 0
+    "config": {
+      "poll_interval": 5
     }
-  }, 
-  "network_usage": {
-    "is_busy": false, 
+  },
+  "cpu_usage": {
+    "is_busy": false,
+    "total": 0,
+    "config": {
+      "poll_interval": 1,
+      "busy_threshold": 0.5
+    }
+  },
+  "disk_usage": {
+    "is_busy": true,
     "total": {
-      "bytes_received_per_second": 345452, 
-      "bytes_sent_per_second": 343809
+      "bytes_read_per_second": 4077,
+      "bytes_write_per_second": 8155
+    },
+    "config": {
+      "poll_interval": 1,
+      "read_usage_threshold": 0,
+      "write_usage_threshold": 0
+    }
+  },
+  "network_usage": {
+    "is_busy": true,
+    "total": {
+      "bytes_received_per_second": 5417,
+      "bytes_sent_per_second": 2899
+    },
+    "config": {
+      "poll_interval": 1,
+      "received_usage_threshold": 1024,
+      "sent_usage_threshold": 1024
     }
   }
 }
