@@ -17,26 +17,31 @@ from typing import Any, Dict, List, Tuple, Set, Union
 _TB: int = 1024 * 1024 * 1024 * 1024
 _ENV_VAR_PREFIX: str = "ACTIVITY_MONITOR"
 
+
+def _read_env(var_name: str, default: Any, base_type: type) -> Any:
+    return base_type(os.environ.get(var_name, default))
+
+
 # NOTE: using high thresholds to make service by default
 # considered inactive.
 # If the service owner does not change these, by lowering
 # them to an adequate value the service will always be shut
 # down as soon as the inactivity period is detected.
 _THRESHOLD_PREFIX: str = f"{_ENV_VAR_PREFIX}_BUSY_THRESHOLD"
-BUSY_USAGE_THRESHOLD_CPU: float = os.environ.get(
-    f"{_THRESHOLD_PREFIX}_CPU_PERCENT", 1000
+BUSY_USAGE_THRESHOLD_CPU: float = _read_env(
+    f"{_THRESHOLD_PREFIX}_CPU_PERCENT", 1000, float
 )
-BUSY_USAGE_THRESHOLD_DISK_READ: int = os.environ.get(
-    f"{_THRESHOLD_PREFIX}_DISK_READ_BPS", 1 * _TB
+BUSY_USAGE_THRESHOLD_DISK_READ: int = _read_env(
+    f"{_THRESHOLD_PREFIX}_DISK_READ_BPS", 1 * _TB, int
 )
-BUSY_USAGE_THRESHOLD_DISK_WRITE: int = os.environ.get(
-    f"{_THRESHOLD_PREFIX}_DISK_WRITE_BPS", 1 * _TB
+BUSY_USAGE_THRESHOLD_DISK_WRITE: int = _read_env(
+    f"{_THRESHOLD_PREFIX}_DISK_WRITE_BPS", 1 * _TB, int
 )
-BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED: int = os.environ.get(
-    f"{_THRESHOLD_PREFIX}_NETWORK_RECEIVE_BPS", 1 * _TB
+BUSY_USAGE_THRESHOLD_NETWORK_RECEIVED: int = _read_env(
+    f"{_THRESHOLD_PREFIX}_NETWORK_RECEIVE_BPS", 1 * _TB, int
 )
-BUSY_USAGE_THRESHOLD_NETWORK_SENT: int = os.environ.get(
-    f"{_THRESHOLD_PREFIX}_NETWORK_SENT_BPS", 1 * _TB
+BUSY_USAGE_THRESHOLD_NETWORK_SENT: int = _read_env(
+    f"{_THRESHOLD_PREFIX}_NETWORK_SENT_BPS", 1 * _TB, int
 )
 
 # NOTE: set the following flags to disable a specific monitor
@@ -226,10 +231,11 @@ class JupyterKernelMonitor(AbstractIsBusyMonitor):
     def get_debug_entry(self) -> Dict[str, Any]:
         return {
             "kernel_monitor": {
-                "is_busy": self.is_busy, 
-                "config": {"poll_interval": self._poll_interval}
+                "is_busy": self.is_busy,
+                "config": {"poll_interval": self._poll_interval},
             }
         }
+
 
 ProcessID = int
 TimeSeconds = float
@@ -248,9 +254,9 @@ class CPUUsageMonitor(AbstractIsBusyMonitor):
         self.busy_threshold = busy_threshold
 
         # snapshot
-        self._last_sample: dict[ProcessID, tuple[TimeSeconds, PercentCPU]] = (
-            self._sample_total_cpu_usage()
-        )
+        self._last_sample: dict[
+            ProcessID, tuple[TimeSeconds, PercentCPU]
+        ] = self._sample_total_cpu_usage()
         self.total_cpu_usage: PercentCPU = 0
 
     @staticmethod
@@ -302,11 +308,12 @@ class CPUUsageMonitor(AbstractIsBusyMonitor):
     def get_debug_entry(self) -> Dict[str, Any]:
         return {
             "cpu_usage": {
-                "is_busy": self.is_busy, "total": self.total_cpu_usage,
+                "is_busy": self.is_busy,
+                "total": self.total_cpu_usage,
                 "config": {
-                    "poll_interval": self._poll_interval, 
-                    "busy_threshold": self.busy_threshold
-                }
+                    "poll_interval": self._poll_interval,
+                    "busy_threshold": self.busy_threshold,
+                },
             },
         }
 
@@ -403,10 +410,10 @@ class DiskUsageMonitor(AbstractIsBusyMonitor):
                     "bytes_write_per_second": self.total_bytes_write,
                 },
                 "config": {
-                    "poll_interval": self._poll_interval, 
+                    "poll_interval": self._poll_interval,
                     "read_usage_threshold": self.read_usage_threshold,
-                    "write_usage_threshold": self.write_usage_threshold
-                }
+                    "write_usage_threshold": self.write_usage_threshold,
+                },
             }
         }
 
@@ -433,9 +440,9 @@ class NetworkUsageMonitor(AbstractIsBusyMonitor):
         self.received_usage_threshold = received_usage_threshold
         self.sent_usage_threshold = sent_usage_threshold
 
-        self._last_sample: tuple[TimeSeconds, BytesReceived, BytesSent] = (
-            self._sample_total_network_usage()
-        )
+        self._last_sample: tuple[
+            TimeSeconds, BytesReceived, BytesSent
+        ] = self._sample_total_network_usage()
         self.bytes_received: BytesReceived = 0
         self.bytes_sent: BytesSent = 0
 
@@ -513,10 +520,10 @@ class NetworkUsageMonitor(AbstractIsBusyMonitor):
                     "bytes_sent_per_second": self.bytes_sent,
                 },
                 "config": {
-                    "poll_interval": self._poll_interval, 
+                    "poll_interval": self._poll_interval,
                     "received_usage_threshold": self.received_usage_threshold,
-                    "sent_usage_threshold": self.sent_usage_threshold
-                }
+                    "sent_usage_threshold": self.sent_usage_threshold,
+                },
             }
         }
 
