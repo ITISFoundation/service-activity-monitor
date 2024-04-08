@@ -224,8 +224,12 @@ class JupyterKernelMonitor(AbstractIsBusyMonitor):
         return self.are_kernels_busy
 
     def get_debug_entry(self) -> Dict[str, Any]:
-        return {"kernel_monitor": {"is_busy": self.is_busy}}
-
+        return {
+            "kernel_monitor": {
+                "is_busy": self.is_busy, 
+                "config": {"poll_interval": self._poll_interval}
+            }
+        }
 
 ProcessID = int
 TimeSeconds = float
@@ -297,7 +301,13 @@ class CPUUsageMonitor(AbstractIsBusyMonitor):
 
     def get_debug_entry(self) -> Dict[str, Any]:
         return {
-            "cpu_usage": {"is_busy": self.is_busy, "total": self.total_cpu_usage},
+            "cpu_usage": {
+                "is_busy": self.is_busy, "total": self.total_cpu_usage,
+                "config": {
+                    "poll_interval": self._poll_interval, 
+                    "busy_threshold": self.busy_threshold
+                }
+            },
         }
 
 
@@ -392,6 +402,11 @@ class DiskUsageMonitor(AbstractIsBusyMonitor):
                     "bytes_read_per_second": self.total_bytes_read,
                     "bytes_write_per_second": self.total_bytes_write,
                 },
+                "config": {
+                    "poll_interval": self._poll_interval, 
+                    "read_usage_threshold": self.read_usage_threshold,
+                    "write_usage_threshold": self.write_usage_threshold
+                }
             }
         }
 
@@ -497,6 +512,11 @@ class NetworkUsageMonitor(AbstractIsBusyMonitor):
                     "bytes_received_per_second": self.bytes_received,
                     "bytes_sent_per_second": self.bytes_sent,
                 },
+                "config": {
+                    "poll_interval": self._poll_interval, 
+                    "received_usage_threshold": self.received_usage_threshold,
+                    "sent_usage_threshold": self.sent_usage_threshold
+                }
             }
         }
 
