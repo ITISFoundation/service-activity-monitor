@@ -206,12 +206,18 @@ class JupyterKernelMonitor(AbstractIsBusyMonitor):
 
     def _get(self, path: str) -> dict:
         r = requests.get(
-            f"{JUPYTER_NOTEBOOK_BASE_URL}{path}", headers={"accept": "application/json"}
+            f"{JUPYTER_NOTEBOOK_BASE_URL}{path}",
+            headers={"accept": "application/json"},
+            timeout=2,
         )
         return r.json()
 
     def _update_kernels_activity(self) -> None:
-        json_response = self._get("/api/kernels")
+        try:
+            json_response = self._get("/api/kernels")
+        except Exception:  # pylint:disable=broad-exception-caught
+            self.are_kernels_busy = False
+            return
 
         are_kernels_busy = False
 
@@ -254,9 +260,9 @@ class CPUUsageMonitor(AbstractIsBusyMonitor):
         self.busy_threshold = busy_threshold
 
         # snapshot
-        self._last_sample: dict[
-            ProcessID, tuple[TimeSeconds, PercentCPU]
-        ] = self._sample_total_cpu_usage()
+        self._last_sample: dict[ProcessID, tuple[TimeSeconds, PercentCPU]] = (
+            self._sample_total_cpu_usage()
+        )
         self.total_cpu_usage: PercentCPU = 0
 
     @staticmethod
@@ -440,9 +446,9 @@ class NetworkUsageMonitor(AbstractIsBusyMonitor):
         self.received_usage_threshold = received_usage_threshold
         self.sent_usage_threshold = sent_usage_threshold
 
-        self._last_sample: tuple[
-            TimeSeconds, BytesReceived, BytesSent
-        ] = self._sample_total_network_usage()
+        self._last_sample: tuple[TimeSeconds, BytesReceived, BytesSent] = (
+            self._sample_total_network_usage()
+        )
         self.bytes_received: BytesReceived = 0
         self.bytes_sent: BytesSent = 0
 

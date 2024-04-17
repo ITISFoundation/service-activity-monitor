@@ -9,6 +9,7 @@ from tenacity import Retrying
 from tenacity.stop import stop_after_delay
 from tenacity.wait import wait_fixed
 from conftest import _ActivityGenerator
+from unittest.mock import Mock
 
 
 if TYPE_CHECKING:
@@ -271,3 +272,10 @@ def test_metric_manager(metrics_manager: activity_monitor.MetricsManager):
         assert "# HELP metric_name metric_help" in formatted_metrics
         assert "# TYPE metric_name counter" in formatted_metrics
         assert f"metric_name {total_count}" in formatted_metrics
+
+
+def test_regression_jypyter_not_running():
+    monitor = activity_monitor.JupyterKernelMonitor(10, Mock())
+
+    monitor._update_kernels_activity()
+    assert monitor.are_kernels_busy is False
