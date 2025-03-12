@@ -351,8 +351,14 @@ class DiskUsageMonitor(AbstractIsBusyMonitor):
     @staticmethod
     def _sample_disk_usage(
         process: psutil.Process,
-    ) -> Tuple[ProcessID, Tuple[TimeSeconds, BytesRead, BytesWrite]]:
-        counters = process.io_counters()
+    ) -> Tuple[ProcessID, Tuple[TimeSeconds, BytesRead, BytesWrite]] | None:
+        try:
+            counters = process.io_counters()
+        except (psutil.AccessDenied):
+            _logger.warning("cannot access process='%s'", process)
+            return None
+        except psutil.NoSuchProcess: 
+            return None
         return (process.pid, (time.time(), counters.read_bytes, counters.write_bytes))
 
     def _sample_total_disk_usage(
@@ -362,7 +368,8 @@ class DiskUsageMonitor(AbstractIsBusyMonitor):
             self.thread_executor.submit(self._sample_disk_usage, p)
             for p in _get_sibling_processes()
         ]
-        return dict([f.result() for f in as_completed(futures)])
+        results = [f.result() for f in as_completed(futures)]
+        return dict(r for r in results if r is not None)
 
     @staticmethod
     def _get_bytes_over_one_second(
