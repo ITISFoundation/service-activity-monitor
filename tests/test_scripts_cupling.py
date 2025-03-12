@@ -15,8 +15,8 @@ def test_same_listen_port(monkeypatch: pytest.MonkeyPatch):
 
     assert activity_monitor.LISTEN_PORT == activity.LISTEN_PORT
 
-    mocked_port = "314"
-    monkeypatch.setenv("ACTIVITY_MONITOR_LISTEN_PORT", mocked_port)
+    mocked_port = 314
+    monkeypatch.setenv("ACTIVITY_MONITOR_LISTEN_PORT", f"{mocked_port}")
 
     reload(activity)
     reload(activity_monitor)
