@@ -115,7 +115,7 @@ callbacks-mapping:
 
 ### `GET /activity`
 
-Used by oSPARC top retrieve the status of the service if it's active or not
+Used by oSPARC to retrieve the status of the service if it's active or not
 
 ```json
 {"seconds_inactive": 0}
