@@ -11,7 +11,7 @@ from contextlib import suppress
 from datetime import datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from threading import Thread
-from typing import Any, Dict, List, Tuple, Set, Union
+from typing import Any, Dict, List, Optional, Tuple, Set, Union
 
 
 _TB: int = 1024 * 1024 * 1024 * 1024
@@ -351,7 +351,7 @@ class DiskUsageMonitor(AbstractIsBusyMonitor):
     @staticmethod
     def _sample_disk_usage(
         process: psutil.Process,
-    ) -> Tuple[ProcessID, Tuple[TimeSeconds, BytesRead, BytesWrite]] | None:
+    ) -> Optional[Tuple[ProcessID, Tuple[TimeSeconds, BytesRead, BytesWrite]]]:
         try:
             counters = process.io_counters()
         except (psutil.AccessDenied):
