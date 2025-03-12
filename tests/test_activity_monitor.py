@@ -26,7 +26,8 @@ def mock__get_sibling_processes(
     mocker: MockFixture,
 ) -> Callable[[List[int]], List[psutil.Process]]:
     def _get_processes(pids: List[int]) -> List[psutil.Process]:
-        results = []
+        no_access_pid = psutil.Process(1)   # ensure it does not error out
+        results = [no_access_pid]
         for pid in pids:
             proc = psutil.Process(pid)
             assert proc.status()
